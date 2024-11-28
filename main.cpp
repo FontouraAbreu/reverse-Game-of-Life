@@ -3,6 +3,7 @@
 #include <vector>
 #include <sstream>
 #include <iostream>
+#include <thread>
 using namespace std;
 using namespace z3;
 
@@ -29,18 +30,21 @@ void printMatrix(const vector<vector<int>>& matrix) {
         }
         cout << endl;
     }
+    cout << "\n\n" ;
 }
 
 int main() {
     int n, m;
-    vector<vector<int>> matrix = readMatrix(n, m);
+    vector<vector<int>> matrix = readMatrix(n, m)
 
     cout << "Dimensões: " << n << " x " << m << endl;
     cout << "Matriz:" << endl;
     printMatrix(matrix);
 
-    context c ;
-    solver s(c) ;
+    config cfg ;
+    context c(cfg) ;
+
+    optimize s(c) ;
 
     vector<vector<expr>> cell(n, vector<expr>(m, c.bool_val(false)));
     for(int i = 0; i<n; i++)
@@ -74,7 +78,6 @@ int main() {
         }
     }
 
-    optimize opt(c) ;
 
     expr total_live_cells = c.int_val(0) ;
     for(int i = 0; i<n; i++) {
@@ -83,18 +86,19 @@ int main() {
         }
     }
 
-    opt.minimize(total_live_cells) ;
+    s.minimize(total_live_cells) ;
 
-    if(opt.check() == sat) {
-        model mdl = opt.get_model() ;
+    if(s.check() == sat) {
+        model mdl = s.get_model() ;
 
         for(int i = 0; i<n; i++) {
             for(int j = 0; j<m; j++) {
-                cout << (mdl.eval(cell[i][j]).is_true() ? "1 " : "0 ") ;
+                expr e = mdl.eval(cell[i][j], true);
+                cout << (e.is_true() ? "1 " : "0 ");
             }
             cout << "\n" ;
         }
-    }
+    } else cout << "Não SAT\n" ;
 
     return 0;
 }
