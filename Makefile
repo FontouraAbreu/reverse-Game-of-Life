@@ -1,11 +1,14 @@
 CC = g++
-OUT = gol
+OUT = revgol
 LIB = -lz3
 all:
-	$(CC) main.cpp -o $(OUT) $(LIB)
+	$(CC) revgol.cpp -o $(OUT) $(LIB)
 
-ex:
-	gcc exgol.c -o exgol
+debug:
+	$(CC) revgol.cpp -o $(OUT) -DDEBUG $(LIB)
+
+gol:
+	gcc gol.c -o gol
 
 purge:
-	rm $(OUT)
+	rm -f $(OUT) gol

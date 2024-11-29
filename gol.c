@@ -23,13 +23,14 @@ int main(){
             }
             if(m1[i][j]){
                 if(sum>=2 && sum<=3){
-                    printf("1 ") ;
-                } else printf("0 ") ;
+                    printf("1") ;
+                } else printf("0") ;
             } else {
                 if(sum == 3){
-                    printf("1 ") ;
-                } else printf("0 ") ;
+                    printf("1") ;
+                } else printf("0") ;
             }
+            if(j<m-1) printf(" ") ;
         }
         printf("\n") ;
     }
