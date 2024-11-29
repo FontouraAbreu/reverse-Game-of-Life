@@ -103,7 +103,7 @@ int main() {
 
     if(s.check() == sat) {
         model mdl = s.get_model() ;
-#ifdef DEBUG
+#ifdef DIMS
         cout << n << " " << m << "\n" ;
 #endif
         for(int i = 0; i<n; i++) {

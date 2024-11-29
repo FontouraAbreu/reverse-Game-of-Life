@@ -4,11 +4,14 @@ LIB = -lz3
 all:
 	$(CC) revgol.cpp -o $(OUT) $(LIB)
 
-debug:
-	$(CC) revgol.cpp -o $(OUT) -DDEBUG $(LIB)
+dimInclude:
+	$(CC) revgol.cpp -o $(OUT) -DDIMS $(LIB)
 
 gol:
 	gcc gol.c -o gol
 
+visual:
+	gcc visual.c -o visual
+
 purge:
-	rm -f $(OUT) gol
+	rm -f $(OUT) gol visual
