@@ -48,6 +48,8 @@ int main() {
 
     config cfg ;        // Configurações do solver
     context c(cfg) ;    // Contexto do solver
+    set_param("parallel.enable", true) ;
+    set_param("parallel.threads.max", 8) ;
     optimize s(c) ;     // Solver
     vector<vector<expr>> cell(n, vector<expr>(m, c.bool_val(false))); // Resultado
 
@@ -58,21 +60,7 @@ int main() {
     for(int i = 0; i<n; i++){
         for(int j = 0; j<m; j++){
             expr neighbour_sum = c.int_val(0) ;
-
             // Faz a soma dos vizinhos
-            for(int di = -1; di<=1; di++) {
-                for(int dj = -1; dj<=1; dj++){
-                    if(di == 0 && dj == 0) continue ;
-
-                    int ni = i+di ;
-                    int nj = j+dj ;
-
-                    if(ni >= 0 && ni < n && nj >= 0 && nj < m) {
-                        neighbour_sum = neighbour_sum + ite(cell[ni][nj], c.int_val(1), c.int_val(0)) ;
-                    }
-                }
-            }
-
             int nbsum_t1 = 0 ;
             for(int di = -2; di<=2; di++) {
                 for(int dj = -2; dj<=2; dj++){
@@ -81,11 +69,14 @@ int main() {
                     int ni = i+di ;
                     int nj = j+dj ;
 
-                    if(ni >= 0 && ni < n && nj >= 0 && nj < m)
-                        nbsum_t1 += matrix[ni][nj] ;
+                    if(ni < 0 || ni >= n || nj < 0 || nj >= m) continue ;
+
+                    nbsum_t1 += matrix[ni][nj] ;
+
+                    if(di<<(30) != 2<<30 && dj<<30 != 2<<30)
+                        neighbour_sum = neighbour_sum + ite(cell[ni][nj], c.int_val(1), c.int_val(0)) ;
                 }
             }
-
             // Aplica as regras do Game Of Life
             if (matrix[i][j] == 1) {
                 s.add((cell[i][j] && (neighbour_sum == 2 || neighbour_sum == 3)) ||
