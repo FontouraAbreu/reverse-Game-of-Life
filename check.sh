@@ -1,4 +1,6 @@
 #! /bin/bash
+# ./check.sh [DIMENSAO X] [DIMENSAO Y]
+# o script ira procurar por testes/tXxY.t1 e rodar o solver e o visualizador
 
 # Checa se argumentos estão corretos ###########################################
 [[ ${#} != 2 ]] && \
