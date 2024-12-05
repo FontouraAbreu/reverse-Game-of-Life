@@ -1,0 +1,65 @@
+* Alunos
+-> Guiusepe Oneda Dal Pai (GRR20210572)
+-> Vinícius Fontoura de Abreu (GRR20206873)
+
+* Requisitos para execução
+-> Compilador g++
+-> git
+-> curl
+-> zip
+-> unzip
+-> tar
+-> python3
+-> pkg-config
+-> z3
+
+Fizemos um script para facilitar a instalação dos requisitos, basta rodar o comando abaixo:
+
+./install_requirements.sh
+
+Isso pode levar um tempo, pois o script instala o z3.
+
+* Compilando
+Para compilar o projeto, basta rodar o comando abaixo:
+
+make
+
+2 executáveis serão gerados:
+
+-> ./revgol: gera um estado anterior do jogo da vida a partir de um estado atual
+-> ./gol: gera o próximo estado do jogo da vida a partir de um estado atual
+
+* Executando
+
+Para executar o jogo da vida reverso, basta rodar o comando abaixo:
+
+./revgol < arquivo_de_entrada
+
+* Testes
+
+Criamos um script para nos ajudar a testar a validade de um estado anterior gerado pelo programa. 
+Para rodar o script, basta rodar o comando abaixo:
+
+
+* Detalhes da implementação
+
+** Configurando o solver Z3
+
+Iniciamos o programa incializando o contexto do Z3 e criando um solver. 
+Criamos também uma matriz de expressões booleanas que representam o tabuleiro do jogo da vida.
+Cada célula do tabuleiro é iniciada com o valor falso.
+
+** Leitura de entrada
+
+Lemos a entrada do programa e, para cada célula, a transformamos em uma variável 
+ainda não interpretada pelo solver no formato:
+
+p_i_j
+
+onde i e j são as coordenadas da célula no tabuleiro.
+
+** Restrições
+
+Para cada célula do tabuleiro, adicionamos as seguintes restrições:
+
+
