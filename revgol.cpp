@@ -54,35 +54,42 @@ int main() {
     vector<vector<expr>> cell(n, vector<expr>(m, c.bool_val(false))); // Resultado
 
     //Cria uma variável SAT para cada célula
-    for(int i = 0; i<n; i++) for(int j = 0; j<m; j++)
-        cell[i][j] = c.bool_const(("p_" + to_string(i) + "_" + to_string(j)).c_str()) ;
+    for(int i = 0; i<n; i++) 
+        for(int j = 0; j<m; j++)
+            cell[i][j] = c.bool_const(("p_" + to_string(i) + "_" + to_string(j)).c_str()) ;
 
+    // Cria as restrições
     for(int i = 0; i<n; i++){
         for(int j = 0; j<m; j++){
             expr neighbour_sum = c.int_val(0) ;
-            // Faz a soma dos vizinhos
-            int nbsum_t1 = 0 ;
+            int nbsum = 0 ;
+            // Percorre os vizinhos com raio 2
             for(int di = -2; di<=2; di++) {
                 for(int dj = -2; dj<=2; dj++){
+                    // Ignora a célula atual
                     if(di == 0 && dj == 0) continue ;
 
+                    // Ignora os vizinhos fora do tabuleiro
                     int ni = i+di ;
                     int nj = j+dj ;
-
                     if(ni < 0 || ni >= n || nj < 0 || nj >= m) continue ;
 
-                    nbsum_t1 += matrix[ni][nj] ;
 
+                    nbsum += matrix[ni][nj] ;
+                    // Soma apenas as células vivas
                     if(di<<(30) != 2<<30 && dj<<30 != 2<<30)
                         neighbour_sum = neighbour_sum + ite(cell[ni][nj], c.int_val(1), c.int_val(0)) ;
                 }
             }
+
             // Aplica as regras do Game Of Life
             if (matrix[i][j] == 1) {
+                // se (celula viva e 2 ou 3 vizinhos vivos) OU (celula morta e 3 vizinhos vivos)
                 s.add((cell[i][j] && (neighbour_sum == 2 || neighbour_sum == 3)) ||
                     (!cell[i][j] && neighbour_sum == 3)) ;
             } else {
-                if(nbsum_t1 == 0) {
+                // se (celula morta e 3 vizinhos vivos) OU (celula viva e menos de 2 ou mais de 3 vizinhos vivos)
+                if(nbsum == 0) {
                     s.add(!cell[i][j]) ;
                 } else {
                     s.add((!cell[i][j] && neighbour_sum != 3) ||
@@ -99,13 +106,16 @@ int main() {
             total_live_cells = total_live_cells + ite(cell[i][j], c.int_val(1), c.int_val(0)) ;
         }
     }
-    s.minimize(total_live_cells) ;
+    s.minimize(total_live_cells) ; // Minimiza o número de células vivas
 
+    // Resolve o problema
     if(s.check() == sat) {
         model mdl = s.get_model() ;
-#ifdef DIMS
+        #ifdef DIMS
         cout << n << " " << m << "\n" ;
-#endif
+        #endif
+
+        // Printa a matriz final
         for(int i = 0; i<n; i++) {
             for(int j = 0; j<m; j++) {
                 expr e = mdl.eval(cell[i][j], true);
