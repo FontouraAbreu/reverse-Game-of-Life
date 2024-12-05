@@ -1,23 +1,16 @@
-* Alunos
--> Guiusepe Oneda Dal Pai (GRR20210572)
--> Vinícius Fontoura de Abreu (GRR20206873)
+██████████                       ██████████
+████  ████  Revertendo Estados   ██  ██  ██
+██████  ██          Do           ████    ██
+██      ██      Game of Life     ████  ████
+██████████                       ██████████
+
+Guiusepe Oneda Dal Pai (GRR20210572)
+Vinícius Fontoura de Abreu (GRR20206873)
+
+################################################################################
 
 * Requisitos para execução
--> Compilador g++
--> git
--> curl
--> zip
--> unzip
--> tar
--> python3
--> pkg-config
--> z3
-
-Fizemos um script para facilitar a instalação dos requisitos, basta rodar o comando abaixo:
-
-./install_requirements.sh
-
-Isso pode levar um tempo, pois o script instala o z3.
+z3
 
 * Compilando
 Para compilar o projeto, basta rodar o comando abaixo:

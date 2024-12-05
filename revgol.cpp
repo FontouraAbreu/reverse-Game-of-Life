@@ -3,15 +3,45 @@
 #include <vector>
 #include <sstream>
 #include <iostream>
-#include <thread>
 using namespace std;
 using namespace z3;
+
+config cfg ;        // Configurações do solver
+context c(cfg) ;    // Contexto do solver
+optimize s(c) ;     // Solver
+vector<vector<int>> matrix ;
+int n, m;
+
+int gol(vector<vector<int>> &mt0){
+    int count = 0;
+    for(int i = 0; i<n; i++){
+        for(int j = 0; j<m; j++){
+            int sum = 0 ;
+            for(int di = -1; di <=1; di++){
+                for(int dj = -1; dj<=1; dj++){
+                    if(di == 0 && dj == 0) continue ;
+                    if(i+di>=0 && i+di<n && j+dj>=0 && j+dj<m)
+                        sum += mt0[i+di][j+dj] ;
+                }
+            }
+            if(mt0[i][j]){
+                if(sum>=2 && sum<=3){
+                    if(!matrix[i][j]) count++ ;
+                } else if(matrix[i][j]) count++ ;
+            } else {
+                if(sum == 3){
+                    if(!matrix[i][j]) count++ ;
+                } else if(matrix[i][j]) count++ ;
+            }
+        }
+    }
+    return count ;
+}
 
 /*
  * Lê a matriz da entrada
  */
-vector<vector<int>> readMatrix(int& n, int& m) {
-    cin >> n >> m;
+vector<vector<int>> readMatrix(int n, int m) {
     vector<vector<int>> matrix(n, vector<int>(m));
 
     for (int i = 0; i < n; i++) {
@@ -41,31 +71,18 @@ void printMatrix(const vector<vector<int>>& matrix) {
 //##############################################################################
 
 
+void init_solver(vector<vector<expr>> &cell){
+    // Cria as variáveis da forma p_i_j para cada célula
+    for(int i = 0; i<n; i++) for(int j = 0; j<m; j++)
+        cell[i][j] = c.bool_const(("p_" + to_string(i) + "_" + to_string(j)).c_str()) ;
 
-int main() {
-    int n, m;
-    vector<vector<int>> matrix = readMatrix(n, m) ;
-
-    config cfg ;        // Configurações do solver
-    context c(cfg) ;    // Contexto do solver
-    set_param("parallel.enable", true) ;
-    set_param("parallel.threads.max", 8) ;
-    optimize s(c) ;     // Solver
-    vector<vector<expr>> cell(n, vector<expr>(m, c.bool_val(false))); // Resultado
-
-    //Cria uma variável SAT para cada célula
-    for(int i = 0; i<n; i++) 
-        for(int j = 0; j<m; j++)
-            cell[i][j] = c.bool_const(("p_" + to_string(i) + "_" + to_string(j)).c_str()) ;
-
-    // Cria as restrições
     for(int i = 0; i<n; i++){
         for(int j = 0; j<m; j++){
             expr neighbour_sum = c.int_val(0) ;
             int nbsum = 0 ;
-            // Percorre os vizinhos com raio 2
-            for(int di = -2; di<=2; di++) {
-                for(int dj = -2; dj<=2; dj++){
+
+            for(int di = -1; di<=1; di++) {
+                for(int dj = -1; dj<=1; dj++){
                     // Ignora a célula atual
                     if(di == 0 && dj == 0) continue ;
 
@@ -77,8 +94,7 @@ int main() {
 
                     nbsum += matrix[ni][nj] ;
                     // Soma apenas as células vivas
-                    if(di<<(30) != 2<<30 && dj<<30 != 2<<30)
-                        neighbour_sum = neighbour_sum + ite(cell[ni][nj], c.int_val(1), c.int_val(0)) ;
+                    neighbour_sum = neighbour_sum + ite(cell[ni][nj], c.int_val(1), c.int_val(0)) ;
                 }
             }
 
@@ -98,33 +114,41 @@ int main() {
             }
         }
     }
+}
 
-    // Cria a expressão de minimização de células vivas
-    expr total_live_cells = c.int_val(0) ;
-    for(int i = 0; i<n; i++) {
-        for(int j = 0 ; j<m; j++){
-            total_live_cells = total_live_cells + ite(cell[i][j], c.int_val(1), c.int_val(0)) ;
-        }
-    }
-    s.minimize(total_live_cells) ; // Minimiza o número de células vivas
+int main() {
+    cin >> n >> m;
 
-    // Resolve o problema
-    if(s.check() == sat) {
-        model mdl = s.get_model() ;
-        #ifdef DIMS
-        cout << n << " " << m << "\n" ;
-        #endif
+    matrix = readMatrix(n, m) ; // Matriz que representa t1
+    vector<vector<int>> mt0(n, vector<int>(m)) ;
+    vector<vector<expr>> cell(n, vector<expr>(m, c.bool_val(false))); // Resultado
 
-        // Printa a matriz final
+    do {
+        // Cria as restrições do solver
+        init_solver(cell) ;
+
+
+        // Cria a expressão de minimização de células vivas
+        expr total_live_cells = c.int_val(0) ;
         for(int i = 0; i<n; i++) {
-            for(int j = 0; j<m; j++) {
-                expr e = mdl.eval(cell[i][j], true);
-                cout << (e.is_true() ? "1" : "0");
-                if(j<m-1) cout << " " ;
+            for(int j = 0 ; j<m; j++){
+                total_live_cells = total_live_cells + ite(cell[i][j], c.int_val(1), c.int_val(0)) ;
             }
-            cout << "\n" ;
         }
-    } else cout << "Não SAT\n" ;
+        s.minimize(total_live_cells) ; // Minimiza o número de células vivas
 
+        // Resolve o problema
+        if(s.check() == sat) {
+            model mdl = s.get_model() ;
+            cout << n << " " << m << "\n" ;
+
+            for(int i = 0; i<n; i++) {
+                for(int j = 0; j<m; j++) {
+                    expr e = mdl.eval(cell[i][j], true);
+                    mt0[i][j] = e.is_true() ? 1 : 0 ;
+                }
+            }
+        } else cout << "Não SAT\n" ;
+    } while (gol(mt0) != 0) ;
     return 0;
 }
