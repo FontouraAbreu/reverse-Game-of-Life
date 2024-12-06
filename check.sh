@@ -20,7 +20,7 @@ testes/t${DIMS}.t1" && \
 
 # Compila o solver e o simulador de regras #####################################
 echo -e "\e[1;32mCOMPILANDO OS ARQUIVOS\e[0m"
-make dimInclude
+make
 make gol
 make visual
 echo
