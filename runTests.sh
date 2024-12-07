@@ -7,7 +7,7 @@ FILE=`cat config | grep ENTRYFILE | cut -d= -f2`
 TIMEF=`cat config | grep TIME | cut -d= -f2`
 
 # Compila os programas necessário ##############################################
-[[ ! -f revgol ]] && make -s
+[[ ! -f revgol ]] && make -s verbose
 [[ ! -f rand ]] && make -s rand
 [[ ! -f gol ]] && make -s gol
 ################################################################################

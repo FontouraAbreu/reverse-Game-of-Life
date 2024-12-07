@@ -1,7 +1,7 @@
 ██████████                       ██████████
 ████  ████  Revertendo Estados   ██  ██  ██
 ██████  ██          Do           ████    ██
-██      ██      Game of Life     ████  ████
+██      ██  Game of Life (GOL)   ████  ████
 ██████████                       ██████████
 
 Guiusepe Oneda Dal Pai (GRR20210572)
@@ -9,50 +9,243 @@ Vinícius Fontoura de Abreu (GRR20206873)
 
 ################################################################################
 
-* Requisitos para execução
-z3
+> REQUISITOS PARA EXECUÇÃO
 
-* Compilando
-Para compilar o projeto, basta rodar o comando abaixo:
+    A implementação foi feita utilizando a biblioteca z3, que pode ser
+instalada nas principais distros Linux pelo pacote de nome "z3".
+    No ubuntu, rode:
 
-make
+$ apt install z3
 
-2 executáveis serão gerados:
+################################################################################
 
--> ./revgol: gera um estado anterior do jogo da vida a partir de um estado atual
--> ./gol: gera o próximo estado do jogo da vida a partir de um estado atual
+> COMO RODAR
 
-* Executando
+    O projeto pode ser compilado pelo comando:
+$ make
+    O código fonte está no caminho src/revgol.cpp.
+    Após a compilação, o executável revgol será gerado, e ele pode ser rodado
+conforme a especificação do trabalho, lendo as dimensões e a matriz que
+representa o estado t1 do GOL pela entrada padrão.
+    Uma instância pode ser testada rodando:
+$ ./revgol < arquivo_entrada
 
-Para executar o jogo da vida reverso, basta rodar o comando abaixo:
+################################################################################
 
-./revgol < arquivo_de_entrada
+> TESTES E UTILITÁRIOS
 
-* Testes
+    Afim de facilitar os testes durante a implementação, foi criado um ambiente
+de testes para o programa, esse ambiente será entregue junto com o trabalho, e
+sugerimos que seja utilizado para testar nossa implementação.
+    Há um script runTests.sh que vai rodar alguns testes automaticamente, basta
+rodar:
+$ runTests.sh
+    Esse script foi escrito para que os testes possam ser definidos pelo
+usuário, o trabalho será enviado com configurações que permitem uma execução
+direta, mas caso haja interesse, o resto dessa sessão vai explicar como o script
+funciona e como tirar máximo proveito dele.
+    Caso não haja interesse por essa sessão, pule para a linha 113.
 
-Criamos um script para nos ajudar a testar a validade de um estado anterior gerado pelo programa. 
-Para rodar o script, basta rodar o comando abaixo:
+    No diretório "auxiliar", há 3 arquivos que auxiliam na observação do
+comportamento do programa, são eles:
+
+1. gol.c
+    Recebe uma entrada correspondente a um estado GOL no mesmo formato das
+entradas do trabalho, aplica as regras na ordem normal do Game Of Life e devolve
+o estado imediatamente posterior ao recebido. Ou seja, executa uma geração GOL
+na ordem "normal".
+
+2. randTable.c
+    Recebe as dimensões de uma matriz (limitado a 25x25) e devolve um tabuleiro
+aleatoriamente preenchido com 0's e 1's. Esse programa também pode definir uma
+"densidade" de célular vivas no tabuleiro, ou seja, é possível definir qual vai
+ser o percentual aproximado de células vivas no tabuleiro gerado.
+    Esse programa pode receber de 1 a 3 parâmetros na linha de comando:
+$ ./rand 10
+    Nesse caso, ele vai criar uma matriz quadrada 10x10
+$ ./rand 10 15
+    Vai criar uma matriz 10x15
+$ ./rand 10 15 60
+    Vai criar uma matriz 10x15 com aproximadamente 60% das células vivas.
+
+    Se uma densidade não for especificada, o programa define uma densidade
+aleatória entre 20% e 40%.
+
+3. visual.c
+    Recebe uma entrada igual a da especificação do trabalho, imprime a entrada
+com caracteres coloridos para melhor visualização do tabuleiro.
+    Não tem nenhuma utilidade, mas é bem legal :).
+
+    Todos esses programas podem ser compilados com regras do make, sendo elas,
+respectivamente:
+$ make gol
+$ make rand
+$ make visual
+
+--------------------------------------------------------------------------------
+
+    Para testar, foi criado o script bash runTests.sh.
+    Esse script lê o arquivo de configuração config, que contém somente as
+variáveis
+
+ENTRYFILE=entries.csv
+TIME=1
+
+    Essas variáveis servem para definir o arquivo de entradas para os testes, e
+se os testes devem ser rodados junto do comando time. Por padrão o comando time
+será rodado.
+    O arquivo entries.csv contém algumas linhas no formato:
+x1,y1,densidade1
+x2,y2,densidadd2
+
+    O script então lê uma linha, usa os dados de entrada para gerar um tabuleiro
+aleatório utilizando o programa randTable.c já descrito, após isso ele usa o
+programa gol para rodar uma geração para frente do tabuleiro gerado. Dessa
+forma, é garantido que o tabuleiro de entrada para um teste tem estado anterior
+, e não vai gerar uma fórmula insatisfazível.
+    O programa randTable.c foi escrito para que a execução de uma geração GOL no
+tabuleiro gerado nunca tenha células vivas nas bordas, dessa forma, as
+populações geradas a partir de randTable.c serão semelhantes às das entradas
+na especificação do trabalho.
+
+################################################################################
+
+> IMPLEMENTAÇÃO
+
+    Para implementar o trabalho, optamos por utilizar o SMT solver z3, usando
+sua biblioteca para a linguagem c++.
+    Nesse caso, o maior desafio é modelar o problema para uma instância SMT, e
+posteriormente tentar achar alguns truques para valorar determinadas células
+antes de rodar o solver, na intenção de otimizar o tempo de execução.
+    A modelagem do problema segue os seguintes passos:
+
+1.
+    É criado uma estrutura do tipo "context", e ela é usada no construtor de uma
+estrutura do tipo "optimize". As estruturas "optimize", no z3, são solvers que
+permitem uma função de otimização acoplada à instância SMT. Isso será essencial,
+já que o objetivo é encontrar o estado anterior ao recebido com o menor número
+de células vivas.
+
+2.
+    Uma matriz nxm de estruturas do tipo "expr" é inicializada, e cada célula é
+associada ao retorno de uma função bool_const() no formato "p_i_j"
+    Após isso, é criada uma expressão que representa a soma dos vizinhos de cada
+célula.
+
+3.
+    Uma condição é associada ao solver para cada célula,
+de forma que replica as regras do jogo da vida, ou seja:
+    Se estadoRecebido[i][j] é vivo:
+        estadoAnterior[i][j] é vivo, e a soma dos vizinhos é 2 ou 3
+        OU
+        estadoAnterior[i][j] é morto, e a soma dos vizinhos é 3
+    Se estadoRecebido[i][j] é morto:
+        estadoAnterior[i][j] é morto, e a soma dos vizinhos não é 3
+        OU
+        estadoAnterior[i][j] é vivo, e a soma dos vizinhos é <2 ou >3
+
+4.
+    Por fim, uma expressão é criada para representar o total de células vivas,
+e ela é utilizada como função de minimização no solver, conforme especificado
+no trabalho.
+
+    A implementação básica do problema é resumida nesses 4 passos, de forma que
+eles são suficiente para resolver qualquer instância recebida. Como é de se
+esperar, essa implementação simples não é satisfatória em tempo, de forma que
+foi observado instâncias 15x15 que custavam mais de 5 minutos para serem
+resolvidas.
+    As formas que achamos para tentar otimizar a modelagem serão discutidas na
+próxima sessão.
 
 
-* Detalhes da implementação
+################################################################################
 
-** Configurando o solver Z3
+> OTIMIZAÇÕES
 
-Iniciamos o programa incializando o contexto do Z3 e criando um solver. 
-Criamos também uma matriz de expressões booleanas que representam o tabuleiro do jogo da vida.
-Cada célula do tabuleiro é iniciada com o valor falso.
+    Todo o esforço para otimizar o problema se baseou no que vamos nos referir
+como "zonas mortas".
+    Suponha um tabuleiro 4x4 com nenhuma célula viva. Pelas regras GOL, há
+vários tabuleiros que poderiam gerar esse estado, por exemplo:
+████████    ██  ████    ████████
+██    ██ OU ██████   OU ████  ██ OU então, um tabuleiro vazio
+████████    ████████    ████████
+████████        ████    ████████
+    Mas, como queremos minimizar o número de células vivas, é certo que o
+tabuleiro que deve ser escolhido seja o que cóntem todas as 16 células mortas.
 
-** Leitura de entrada
+    Com isso em mente, se aplicarmos essa regra para um tabuleiro maior, é
+possível dizer que, se há uma zona morta dentro dele, as células centrais podem
+ser consideradas automaticamente como mortas no estado anterior.
+    O desafio é definir o critério para considerar uma célula parte de zona
+morta. Esse critério se resume definir um raio de vizinhança, e dizer que se uma
+célula C testada está morta em t1 e todos os vizinhos dentro desse raio também,
+então a célula C pode ser valorada automaticamente como morta em t0.
 
-Lemos a entrada do programa e, para cada célula, a transformamos em uma variável 
-ainda não interpretada pelo solver no formato:
+- RAIO 2
+    Se o raio definido for 2, ou seja, se há um quadrado 5x5 dentro do tabuleiro
+em que todas as células estão mortas, é certamente afirmável que a ćelula no
+meio dessa zona morta pode ser valorada como morta em t0.
+    Essa definição funciona 100% das vezes, de forma que ela não pode gerar
+estados anteriores não válidos no solver.
+    Essa otimização melhora o tempo de execução para instâncias que de fato tem
+zonas mortas grandes. Mas não apresenta uma queda significativa de tempo, pois
+na prática só é possível valorar previamente pouquíssimas células no tabuleiro.
+Também há casos não raros em que nenhuma célula está tão isolada, de forma que
+a otimização é inútil.
+    Por isso, optamos por implementar uma solução bem mais ousada e difícil de
+lidar.
 
-p_i_j
+- RAIO 1
+    Se um quadrado 3x3 de células mortas for encontrado, então a célula do meio
+é automaticamente considerada como morta.
 
-onde i e j são as coordenadas da célula no tabuleiro.
+    Essa solução é problemática, pois nem sempre uma célula nas condições
+citadas realmente poderia estar morta no estado anterior, isso foi observado da
+seguinte forma:
+    Dada uma entrada t1 do algoritmo para reverter o GOL e a saída t0, foi dado
+t0 como entrada pelo programa que executa o GOL na ordem normal, e verificou-se
+que a saída não era igual a t1. Ou seja, essa otimização passa por cima de
+algumas regras e pode gerar estados inválidos como anteriores.
+    Mesmo assim, alguns fatores foram considerados para manter essa otimização
+implementada, bem como para resolver os casos em que ela gera estados errados:
 
-** Restrições
+* Dado um tabuleiro finito com bordas mortas, é matematicamente provável que uma
+instância do Game Of Life tende a diminuir e estabilizar em estados cíclicos
+esparsos. Assim, visto que a entrada do programa é com certeza uma instância
+que sofreu no mínimo uma geração das regras, é razoável afirmar que as entradas
+são propícias a ter muitas células que podem ser encaixadas nas regras de zona
+morta. Ou seja, na nossa instância do problema, a nossa solução geralmente é
+capaz de melhorar muito o tempo de execução.
 
-Para cada célula do tabuleiro, adicionamos as seguintes restrições:
+* É raro o caso de que essa otimização gere um estado inválido, e mesmo quando
+gera, ela o calcula tão rapidamente que vale a pena tentar e corrigir os casos
+de borda.
 
+* Quando um estado é inválido, ele diverge por pouquíssimas células do estado
+que realmente deveria ter sido gerado (encontramos no máximo instâncias com 2
+células divergentes).
 
+* Dado o conjunto de células identificadas como "zona morta", é possível
+executar o solver, e caso haja divergência na saída, remover algumas células do
+conjunto e tentar novamente. Isso garante que, no pior dos casos, removeremos
+todos as células da zona morta e teremos que resolver a instância sem otimização
+alguma. É válido citar que durante os testes realizados, não foi identificado
+nenhuma instância em que TODAS as células inicialmente consideradas como mortas
+tiveram que ser tiradas do conjunto, o solver sempre conseguiu achar a resposta
+certa antes disso.
+
+    Em resumo, o algoritmo começa com todas as células em zona morta sendo
+consideradas. Após cada iteração do solver, ele checa se é um estado anterior
+válido e, se não for, procura pelas regiões que não estão certas e removem
+todas as células dessa região do conjunto de zona morta, e então cria um novo
+solver com essa regra e executa.
+    É válido dizer que em alguns casos, as regiões que divergem na resposta do
+solver não tem nenhuma célula na zona morta, nesse caso o algoritmo simplesmente
+remove todas as células de zona morta e executa sem otimização alguma. Foi
+encontrado uma instância com esse problema.
+    Para ilustrar o funcionamento desse esquema, é possível utilizar a regra do
+make:
+$ make verbose
+onde o programa vai informar quando uma iteração de solver nova iniciou e, caso
+ela tenha falhado, quantas células de zona morta serão removidas da próxima
+iteração.

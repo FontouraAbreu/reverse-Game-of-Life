@@ -256,7 +256,9 @@ int main() {
             }
         } else cout << "Não SAT\n" ;
     } while (gol(mt0, try_false) != 0) ;
-
+#ifdef VERBOSE
+    cout << "Solver obteve sucesso na iteração " << iter-1 << "\n" ;
+#endif
     printMatrix(mt0) ;
     return 0;
 }
