@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-int m1[25][25] ;
+int m1[100][100] ;
 
 int main(){
     int n, m ;

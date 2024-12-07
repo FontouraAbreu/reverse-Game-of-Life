@@ -9,16 +9,35 @@ using namespace z3;
 vector<vector<int>> matrix ;
 int n, m;
 
+/*
+ * Cria um contexto genérico
+ */
 std::unique_ptr<z3::context> createContext() {
     return std::make_unique<z3::context>();
 }
+//##############################################################################
 
+
+
+/*
+ *  Cria um solver genérico
+ */
 std::unique_ptr<z3::optimize> createSolver(z3::context& c) {
     return std::make_unique<z3::optimize>(c);
 }
+//##############################################################################
 
+
+
+/*
+ * Simula o Game of Life na ordem normal
+ * checa se o solver achou uma solução válida, se não, reseta os vizinhos que
+ * foram considerados como mortos
+ */
 int gol(vector<vector<int>> &mt0, vector<vector<int>> &falses){
     int count = 0;
+    int count2 = 0 ;
+    bool reset = false ;
     for(int i = 0; i<n; i++){
         for(int j = 0; j<m; j++){
             bool reset_neighbors = false ;
@@ -52,18 +71,33 @@ int gol(vector<vector<int>> &mt0, vector<vector<int>> &falses){
                 }
             }
             if(reset_neighbors){
+                reset = true ;
                 for(int di = -1; di<=1; di++) for(int dj=-1; dj<=1; dj++) {
                     if(di == 0 && dj == 0) continue ;
                     int ni = i + di ;
                     int nj = j + dj ;
                     if(ni<0 || ni>= n || nj<0 || nj>=m) continue ;
-                    falses[ni][nj] = 0 ;
+                    if(falses[ni][nj]){
+                        count2 ++ ;
+                        falses[ni][nj] = 0 ;
+                    }
                 }
             }
         }
     }
+    // Se não achou nenhum vizinho errado, reseta a matriz toda
+    if(!count2) for(int i=0;i<n;i++) for(int j=0;j<m;j++) falses[i][j] = 0 ;
+#ifdef VERBOSE
+    if(reset)
+        if(!count2 && reset){
+            cout << "Todas as células isoladas estão com regras normais\n" ;
+        } else cout << "Iteração falhou, resetando " << count2 << " células\n" ;
+#endif
     return count ;
 }
+//##############################################################################
+
+
 
 /*
  * Lê a matriz da entrada
@@ -97,6 +131,11 @@ void printMatrix(const vector<vector<int>>& matrix) {
 }
 //##############################################################################
 
+
+
+/*
+ * Acha células isolada
+ */
 int find_falses(vector<vector<int>> &mf) {
     int c = 0;
     for(int i = 0; i<n; i++) for(int j = 0; j<m; j++) {
@@ -117,7 +156,13 @@ int find_falses(vector<vector<int>> &mf) {
     }
     return c ;
 }
+//##############################################################################
 
+
+
+/*
+ * Inicializa um solver com as regras
+ */
 void init_solver(vector<vector<expr>> &cell, vector<vector<int>> &falses,
         unique_ptr<optimize> &s, unique_ptr<context> &c){
     // Cria as variáveis da forma p_i_j para cada célula
@@ -159,6 +204,9 @@ void init_solver(vector<vector<expr>> &cell, vector<vector<int>> &falses,
         }
     }
 }
+//##############################################################################
+
+
 
 int main() {
     cin >> n >> m;
@@ -167,9 +215,18 @@ int main() {
     vector<vector<int>> mt0(n, vector<int>(m)) ;
     vector<vector<int>> try_false(n, vector<int>(m, 0)) ;
 
-    find_falses(try_false) ;
+    int falses = find_falses(try_false) ;
+
+#ifdef VERBOSE
+    cout << falses << " células isoladas encontradas\n" ;
+    int iter = 0 ;
+#endif
 
     do {
+#ifdef VERBOSE
+        cout << "Iteração de número " << iter++ << " começando...\n" ;
+#endif
+
         auto c = createContext() ;
         auto s = createSolver(*c) ;
         vector<vector<expr>> cell(n, vector<expr>(m, c->bool_val(false))); // Resultado
