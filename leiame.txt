@@ -255,6 +255,6 @@ iteração.
 > CONCLUSÃO
 
     Além de modelar o problema da reversão do Game of Life, pudemos inventar
-uma "heurística" que nos pareceu uma ideia insana de começo, mas que acabou se
-provando funcional e capaz de melhorar significativamente nossa solução,
-especialmente em tabuleiros pouco densos.
+uma "heurística" que nos pareceu uma ideia impraticável de começo, mas que
+acabou se provando funcional e capaz de melhorar significativamente nossa
+solução, especialmente em tabuleiros pouco densos.
