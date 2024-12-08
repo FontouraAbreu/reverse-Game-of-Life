@@ -249,3 +249,12 @@ $ make verbose
 onde o programa vai informar quando uma iteração de solver nova iniciou e, caso
 ela tenha falhado, quantas células de zona morta serão removidas da próxima
 iteração.
+
+################################################################################
+
+> CONCLUSÃO
+
+    Além de modelar o problema da reversão do Game of Life, pudemos inventar
+uma "heurística" que nos pareceu uma ideia insana de começo, mas que acabou se
+provando funcional e capaz de melhorar significativamente nossa solução,
+especialmente em tabuleiros pouco densos.
